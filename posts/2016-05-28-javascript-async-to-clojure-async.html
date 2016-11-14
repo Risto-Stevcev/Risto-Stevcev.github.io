@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Risto Stevcev's Blog - JavaScript async.serial + async.parallel to ClojureScript core.async</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Risto Stevcev's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../about.html">About</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>JavaScript async.serial + async.parallel to ClojureScript core.async</h1>
+
+            <div class="info">
+    Posted on May 28, 2016
+    
+</div>
+
+<h3 id="a-little-background">A Little Background</h3>
+<p>In this post, I’ll show you how you can convert JavaScript async functions to use ClojureScript’s <code>core.async</code>. The way Clojure handles parallelism is by using <a href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a> (Communicating Sequantial Processes). In a nutshell, it uses <code>channels</code> that you can feed data into and extract data out of. Another popular technique for parallelism is the <code>Actor model</code>, popularized by Erlang, which provides special types called <code>Actors</code> that essentially have mailboxes that they can read from and can send mail to other Actors. Actors can be loosely thought of as an extra implementation on top of CSP. One of the reasons Clojure chose CSP is that it’s more loosely coupled – channels are first-class and can be passed around freely without knowing it’s origin. With Actors, you need to know who you are sending the message to.</p>
+<p>The traditional JavaScript techniques for doing async is to provide non-blocking functions that call a callback function when it’s complete. This is also loosely coupled and follows the <a href="https://en.wikipedia.org/wiki/Inversion_of_control">Hollywood Principle</a>, but it has had a bad reputation for creating heavily nested chains of callbacks known as the “Pyramid of Doom” or “Callback Hell”.</p>
+<p>Eventually <code>Promises</code> were developed. This solved the heavy nesting that can result from the plain callback approach, but it still requires chaining Promises together and returning a new Promise for each resolved one. An even more recent development is the use of <code>Observables</code>, or FRP, which by it’s very nature is functionally pure and also handles event streams in a higher-level way. The problem with this approach is that combining Observables is a little awkward, and it introduces additional complexity with the concept of Hot and Cold Observables.</p>
+<p>My favorite approach though is the use of <code>Futures</code>, which has been inspired and adopted by the recent developments in the functional JavaScript community (<a href="https://github.com/ramda/ramda">Ramda</a>, <a href="https://github.com/sanctuary-js/sanctuary">Sanctuary</a>, <a href="https://github.com/fantasyland/fantasy-land">Fantasy Land</a>, etc). The Future is like a Promise except that it’s lazy and only evaluated when <code>fork</code> is called. Future libraries that implement Fantasy Land will implement the <code>Monad</code> specification (Promises are monads also), and so you can chain Futures together using Kliesli composition (<code>pipeK</code>) or with <a href="https://github.com/Risto-Stevcev/do-notation">do notation</a>.</p>
+<p>In this post I’ll actually use another popular JavaScript approach, which is to use the <a href="https://github.com/caolan/async">async</a> library, and I’ll translate <code>async.serial</code> and <code>async.parallel</code> into the ClojureScript <code>core.async</code> equivalent. The <code>async.serial</code> function takes a list of async functions and executes them in parallel – so once the first function is done, it calls the second until that’s done, which calls the third, and so on. The <code>async.parallel</code> function executes all callbacks at the same time or “in parallel” (though we’ll ignore the fact that in the JS world everything is serial under the hood because of the event loop), and then returns the result in the order that it was originally given. So with <code>async.parallel</code>, for example, if the first callback finishes later than the second, it will still be the first element in the array when it gets returned (preserves ordering).</p>
+<h3 id="getting-started">Getting Started</h3>
+<p>I’ll create a new ClojureScript project first:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">lein</span> new figwheel async-to-async
+$ <span class="kw">cd</span> async-to-async/</code></pre></div>
+<p>And I’ll include the <a href="https://github.com/JulianBirch/cljs-ajax">cljs-ajax</a> (version “0.5.5”) library as a dependency in <code>project.clj</code>, and start up figwheel:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">lein</span> figwheel</code></pre></div>
+<h3 id="translating-async-callback-functions-to-core.async-functions">Translating Async Callback Functions to Core.Async Functions</h3>
+<p>In this section I’ll show you how you can translate callback-style JS functions into <code>core.async</code> style functions. I’ll wrap the <code>ajax.core/GET</code> function so that it returns a channel rather than providing a callback. Here is how my <code>core.cljs</code> file looks like:</p>
+<div class="sourceCode"><pre class="sourceCode clojure"><code class="sourceCode clojure">(<span class="kw">ns</span> async-to-async.core
+  (<span class="kw">:require-macros</span> [cljs.core.async.macros <span class="kw">:refer</span> [go]])
+  (<span class="kw">:require</span> [cljs.core.async <span class="kw">:as</span> async <span class="kw">:refer</span> [&lt;! put! chan]]
+            [ajax.core]))
+
+(<span class="kw">defn</span><span class="fu"> GET </span>[url]
+  (<span class="kw">let</span> [out (chan)
+        handler #(put! out %<span class="dv">1</span>)]
+    (ajax.core/GET url {<span class="kw">:handler</span> handler <span class="kw">:error-handler</span> handler})
+    out))
+
+(<span class="kw">defn</span><span class="fu"> on-js-reload </span>[] )</code></pre></div>
+<p>I’ve just included the <code>core.async</code> utilities I’ll use and the <code>ajax.core</code> library and the simple GET wrapper function. All it does is it creates and returns a channel which gets fed the result from the <code>ajax.core/GET</code> request for the given url once the handler callback returns.</p>
+<h3 id="imitating-async.serial">Imitating async.serial</h3>
+<div class="sourceCode"><pre class="sourceCode clojure"><code class="sourceCode clojure">(<span class="kw">ns</span> async-to-async.core
+  (<span class="kw">:require-macros</span> [cljs.core.async.macros <span class="kw">:refer</span> [go]])
+  (<span class="kw">:require</span> [cljs.core.async <span class="kw">:as</span> async <span class="kw">:refer</span> [&lt;! put! chan]]
+            [ajax.core]))
+
+(<span class="kw">defn</span><span class="fu"> GET </span>[url]
+  (<span class="kw">let</span> [out (chan)
+        handler #(put! out %<span class="dv">1</span>)]
+    (ajax.core/GET url {<span class="kw">:handler</span> handler <span class="kw">:error-handler</span> handler})
+    out))
+
+(enable-console-print!)
+
+<span class="co">;; Fixed number of requests</span>
+
+(go
+  (<span class="kw">let</span> [users [(&lt;! (GET <span class="st">&quot;http://jsonplaceholder.typicode.com/users/1&quot;</span>))
+               (&lt;! (GET <span class="st">&quot;http://jsonplaceholder.typicode.com/users/2&quot;</span>))]]
+    (<span class="kw">println</span> users)))
+
+
+<span class="co">;; Variable number of requests</span>
+
+(go
+  (<span class="kw">let</span> [users (&lt;! (go
+                    (<span class="kw">let</span> [usrs (<span class="kw">atom</span> [])]
+                      (<span class="kw">dotimes</span> [n <span class="dv">3</span>]
+                        (<span class="kw">swap!</span> usrs <span class="kw">conj</span> (&lt;! (GET (<span class="kw">str</span> <span class="st">&quot;http://jsonplaceholder.typicode.com/users/&quot;</span> (<span class="kw">inc</span> n))))))
+                      <span class="kw">@usrs)))]</span> 
+    (<span class="kw">println</span> users)))
+
+(<span class="kw">defn</span><span class="fu"> on-js-reload </span>[])</code></pre></div>
+<p>The key to imitating <code>async.serial</code> is to use the <code>&lt;!</code> function. The core.async docs state that <code>&lt;!</code> will park if nothing is available in that channel, which by extension means that it will wait for the first request to finish and that channel to close before going to the second one, and so on. You can confirm this by opening the Dev Tools Network panel, and you’ll see that the second request doesn’t start until the first one finishes.</p>
+<p>Unfortunately, there are serious deficits to <code>core.asyc</code>, the biggest pain point being that <code>go</code> stops evaluating at function boundaries. As a result, you can’t really use <code>&lt;!</code> with <code>map</code>, so you have to simulate map-like behavior. In this case I’m using an atom with <code>dotimes</code>, which doesn’t allocate closures internally.</p>
+<h3 id="imitating-async.parallel">Imitating async.parallel</h3>
+<div class="sourceCode"><pre class="sourceCode clojure"><code class="sourceCode clojure">(<span class="kw">ns</span> async-to-async.core
+  (<span class="kw">:require-macros</span> [cljs.core.async.macros <span class="kw">:refer</span> [go]])
+  (<span class="kw">:require</span> [cljs.core.async <span class="kw">:as</span> async <span class="kw">:refer</span> [&lt;! put! chan]]
+            [ajax.core]))
+
+(<span class="kw">defn</span><span class="fu"> GET </span>[url]
+  (<span class="kw">let</span> [out (chan)
+        handler #(put! out %<span class="dv">1</span>)]
+    (ajax.core/GET url {<span class="kw">:handler</span> handler <span class="kw">:error-handler</span> handler})
+    out))
+
+(enable-console-print!)
+
+<span class="co">;; Fixed number of requests</span>
+
+(go
+  (<span class="kw">let</span> [channels [(GET <span class="st">&quot;http://jsonplaceholder.typicode.com/users/1&quot;</span>)
+                  (GET <span class="st">&quot;http://jsonplaceholder.typicode.com/users/2&quot;</span>)]]
+    (<span class="kw">println</span> (&lt;! (async/map (<span class="kw">comp</span> <span class="kw">vec</span> <span class="kw">list</span>) channels)))))
+
+
+<span class="co">;; Variable number of requests</span>
+
+(go
+  (<span class="kw">let</span> [channels (mapv #(GET (<span class="kw">str</span> <span class="st">&quot;http://jsonplaceholder.typicode.com/users/&quot;</span> (<span class="kw">inc</span> %))) (<span class="kw">range</span> <span class="dv">3</span>))]
+    (<span class="kw">println</span> (&lt;! (async/map (<span class="kw">comp</span> <span class="kw">vec</span> <span class="kw">list</span>) channels)))))
+
+(<span class="kw">defn</span><span class="fu"> on-js-reload </span>[])</code></pre></div>
+<p>The key to simulating <code>async.parallel</code> is to use <code>core.async/map</code> on a collection of channels. The function allows you to effectively convert the collection of channels into another object but returning only a single channel, in this case a vector. Then you can use <code>&lt;!</code> to take the final result. Note that because it doesn’t need to park for each request, it doesn’t have to work around the limitations of the <code>go</code> macro like the equivalent serial version did, so it’s implementation is simpler.</p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            <a href="atom.xml"><i class="fa fa-rss-square"></i></a>
+        </div>
+    </body>
+</html>

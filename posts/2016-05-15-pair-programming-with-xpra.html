@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Risto Stevcev's Blog - Pair programming with Xpra (part 2)</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Risto Stevcev's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../about.html">About</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Pair programming with Xpra (part 2)</h1>
+
+            <div class="info">
+    Posted on May 15, 2016
+    
+</div>
+
+<p>In the first part of this tutorial, I showed how you how two remote developers can SSH into a development environment and use <code>Tmux</code> to share their screens in a memory-efficient way. One drawback of this basic approach is that they are not sharing an <code>X server</code>, so they cannot share graphical environments like the browser, or an IDE.</p>
+<p>In this second part, I’ll show you how you can share a graphical environment in a memory-efficient way using <code>Xpra</code>. Xpra is a best approach to remote pair programming compared to X11-Forwarding or screen-sharing programs, because it’s less invasive and substantially more secure.</p>
+<p>In the first part of the tutorial I set up the environment using <code>Alpine Linux</code>, but in this part I’ll use <code>Lubuntu</code> for brevity’s sake, because manually setting up <code>X</code> properly can be tedious at the best of times. If you want to manually set up <code>X</code> on Alpine, go for it, the vesa driver is widely supported. The Alpine repos have Xpra, so you should be able to do all of the same stuff.</p>
+<h3 id="create-two-vms">Create Two VMs</h3>
+<p>Create two VirtualBox VMs and install <code>Lubuntu</code> on both. The installation process is self-explanatory. One of the instances will host the SSH server and the other will connect to it. If you want to be consistent with this guide, I’m using <code>foobar</code> as the name for the initial user for the box that will host the SSH server. Install SSH, start the server with <code>systemctl start sshd</code>, and make sure that it’s up and running: <code>systemctl status sshd</code></p>
+<p>The reason we need to have two instances for this second part of the tutorial is because we need to have two X servers running to show the screen sharing, and a machine can only have one X server running at any time.</p>
+<h3 id="using-host-only-networking">Using Host-Only Networking</h3>
+<p>Using the port-forwarding trick from part 1 is easy, but it can be limiting if we want to use the default SSH port and to provide real IPs to test the setup out. In this section, I’ll use host-only networking to give the SSH server a real IP to connect to. If you don’t want to use this method or you’re having trouble setting it up, just use the trick from part 1 and make sure you’re giving <code>Xpra</code> the correct <code>host:port</code>, which was <code>localhost:3022</code> in part 1.</p>
+<p>First off, make sure that you disable the port forwarding for the VM if you left it on from part 1.</p>
+<p>From VirtualBox, go to <code>File &gt; Preferences &gt; Network &gt; Host-only Networks</code>, and add a new host. Set the IPv4 to something like <code>192.168.57.1</code> with a netmask of <code>255.255.255.0</code>. Leave IPv6 stuff as is, and don’t enable DHCP.</p>
+<p>Then, under the VM’s settings, go to <code>Network &gt; Adapter 2</code> (make sure the VM isn’t running or this tab will be disabled), and select <code>Host-only Adapter</code> and select the adapter you made under name (it should be <code>vboxnet0</code> by default).</p>
+<p>Start up your VM. Once it’s up and running, type <code>ifconfig</code>. You should see two ethernet interfaces, one of them is the direct interface to your localhost, and the other is the host-only adapter. The one with the higher number (ie. <code>enp0s8</code> &gt; <code>enp0s3</code>) should be your host-only adapter.</p>
+<p>If <code>ifconfig</code> is showing that it has an IPv4 address, you don’t need to do anything from here except SSH to that IP from the host. If it’s not showing an IP, give it a static one. The high-level approach to this is to create an <code>ethernet-static</code> <code>netctl</code> profile that you can <code>start</code>/<code>stop</code>, and the low-level approach is to use <code>ip addr</code>/<code>ip route</code>. I’ll take the middle path and just use <code>ifconfig</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">ifconfig</span> enp0s8 192.168.57.10 netmask 255.255.255.0 up</code></pre></div>
+<p>Then check <code>ifconfig</code> to see that the new IP has been assigned, and then you should be able to SSH to that IP from the host.</p>
+<h3 id="basic-xpra-session">Basic Xpra Session</h3>
+<p>First try <code>Xpra</code> in the simplest way, using the same account. First, go to the VM that’s running the ssh server and type:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> start :100 --sharing --start-child=xterm</code></pre></div>
+<p>This creates a server instance of Xpra for DISPLAY <code>100</code> (choosing a higher display number is generally safer), <code>--sharing</code> to share the socket, and <code>--start-child</code> to tell it to start a program, <code>xterm</code>, on connecting. Alternatively, you can start the child manually like this:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="ot">DISPLAY=</span>:100 <span class="kw">xterm</span></code></pre></div>
+<p>Then, from the other VM and the host machine, connect to the <code>Xpra</code> server instance as the user that spawned it, <code>foobar</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> attach ssh:foobar@192.168.57.10:100 --sharing</code></pre></div>
+<p>Now in both your host machine, and in the client VM, you should see that <code>xterm</code> opened up. If you type something in one of them, it will show up in the other machine! Just like <code>Tmux</code>. Since Xpra provides X, you can launch and multiplex graphical environments such as browsers or IDEs!</p>
+<p>But this basic approach is limiting, because when we want to pair program remotely, we’ll probably be SSH-ing into a dev environment as <strong>different</strong> users. In the next sections I’ll show you how you can do that.</p>
+<h3 id="multiuser-part-1-quick-and-dirty">Multiuser Part 1 (Quick and Dirty)</h3>
+<p>We’ll eventually get to a solution that works for real-world remote dev environments, but it’s good to keep things simple first and incrementally get to the goal because it eliminates more variables. In this case, we’re eliminating permissions variables from the equation.</p>
+<p>First let’s create two more users. The VM that has the SSH server running has a <code>foobar</code> user, but I want to create two more users <code>quxnorf</code> and <code>worble</code> to simulate a real dev environment:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">useradd</span> --create-home --shell /bin/bash quxnorf
+$ <span class="kw">passwd</span> quxnorf
+$ <span class="kw">useradd</span> --create-home --shell /bin/bash worble 
+$ <span class="kw">passwd</span> worble</code></pre></div>
+<p>Add them to sudoers if you wish, and <strong>reboot the system</strong> so that the changes are in effect. Try SSH-ing into the new users from the host machine to confirm that they work as expected.</p>
+<p>Then, create a folder with full access permissions for simplicity’s sake:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">mkdir</span> /xpra
+$ <span class="kw">chmod</span> 777 /xpra</code></pre></div>
+<p>And then start up an Xpra server instance, this time telling Xpra to store the socket in the new <code>/xpra</code> folder:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> start :100 --sharing --start-child=xterm --socket-dir=/xpra</code></pre></div>
+<p>Assuming you set the machine name to <code>foobar</code> and display to <code>:100</code>, the socket that was created should have a name like <code>foobar-VirtualBox-100</code>. The other users need to have read/write permissions on the socket also.</p>
+<p>During the time of this post, the Xpra version that comes with Ubuntu Trusty (0.14.25) doesn’t have the ability to set the permissions on the socket as a flag, but that option is available on the bleeding-edge versions. For obvious reasons, a lot of Linux power users are having a nerdgasm about Xpra, so it’s rapidly being developed.</p>
+<p>In any case, that’s not going to stop me from hacking Xpra to get it to do what I want. So lets update the permissions of the socket:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">chmod</span> a+r /xpra/foobar-VirtualBox-100
+$ <span class="kw">chmod</span> a+w /xpra/foobar-VirtualBox-100</code></pre></div>
+<p>Finally, log into to the Xpra instance from the other VM as <code>quxnorf</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> attach ssh:quxnorf@192.168.57.10:100 --sharing --socket-dir=/xpra</code></pre></div>
+<p>And then login from your host as <code>worble</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> attach ssh:worble@192.168.57.10:100 --sharing --socket-dir=/xpra</code></pre></div>
+<p>You should see that both the VM and the host machine are sharing and multiplexing the same thing!</p>
+<h3 id="multiuser-the-better-way">Multiuser (The Better Way)</h3>
+<p>For a real dev environment, we’ll want to set the permissions in a better way. So in this section I’ll create those kind of permissions.</p>
+<p>First, add the current users on the VM to a new group called <code>xpraers</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">sudo</span> groupadd xpraers
+$ <span class="kw">usermod</span> -a -G xpraers foobar
+$ <span class="kw">usermod</span> -a -G xpraers quxnorf
+$ <span class="kw">usermod</span> -a -G xpraers worble</code></pre></div>
+<p>Restart so the changes come into affect. Then, give execute permissions for the folder to the new group:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">chown</span> foobar:xpraers /xpra
+$ <span class="kw">chmod</span> 775 /xpra</code></pre></div>
+<p>Test that you can <code>touch</code> a file in the <code>/xpra</code> folder as one of the users above. Then, start the Xpra instance like the previous section:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> start :100 --sharing --start-child=xterm --socket-dir=/xpra</code></pre></div>
+<p>And then give the socket read/write permissions for the <code>xpraers</code> group:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">chmod</span> 660 /xpra/foobar-VirtualBox-100
+$ <span class="kw">chown</span> :xpraers /xpra/foobar-VirtualBox-100</code></pre></div>
+<p>Finally, log into to the Xpra instance from the other VM as <code>quxnorf</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> attach ssh:quxnorf@192.168.57.10:100 --sharing --socket-dir=/xpra</code></pre></div>
+<p>And then login from your host as <code>worble</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">xpra</span> attach ssh:worble@192.168.57.10:100 --sharing --socket-dir=/xpra</code></pre></div>
+<p>That’s it! Now you can go ahead and do remote pair programming the way it should be. At this point it should be straightforward how you can set this up with Docker too. I showed this with three users to show separation of concerns, but this can be done with just <code>quxnorf</code> and <code>worble</code> remote users, where for example <code>quxnorf</code> is SSHed and does what <code>foobar</code> did, and then follows the instructions as usual.</p>
+<p>I hope you enjoyed this tutorial as much as I did. Xpra is awesome, and since it’s still currently at major version 0, I can’t wait to see what other changes come in the future!</p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            <a href="atom.xml"><i class="fa fa-rss-square"></i></a>
+        </div>
+    </body>
+</html>

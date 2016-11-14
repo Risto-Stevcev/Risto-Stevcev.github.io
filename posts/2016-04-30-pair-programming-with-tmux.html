@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Risto Stevcev's Blog - Pair programming with Tmux (part 1)</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">Risto Stevcev's Blog</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Home</a>
+                <a href="../about.html">About</a>
+                <a href="../contact.html">Contact</a>
+                <a href="../archive.html">Archive</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Pair programming with Tmux (part 1)</h1>
+
+            <div class="info">
+    Posted on April 30, 2016
+    
+</div>
+
+<p>As my first blog post, I thought I’d share a cool way to do pair programming with terminal mulitplexing. More and more developers are working for home, and so it’s nice to know some quick and easy ways to set up a remote pair programming session.</p>
+<p>Terminal multiplexers provide a way of sharing multiple virtual consoles. There are a lot of different ones out there, but the two most popular one’s are Tmux and GNU Screen. Both are good, but for this blog I’ll be using Tmux because it’s slightly easier to see what’s going on.</p>
+<h3 id="initial-test-run">Initial Test Run</h3>
+<p>Install Tmux, and then fire up two different terminal windows. In the first terminal, type in:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">tmux</span> new -s mysession</code></pre></div>
+<p>You’ll see it fire up Tmux, which will look like the shell you just had, except at the bottom it will say the name you chose for your session (mysession in this case) and the shell program you’re using (for me it’s bash).</p>
+<p>Now attach your second terminal to the session you created:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">tmux</span> attach -t mysession</code></pre></div>
+<p>You’ll see the same thing happen in your second terminal window. Now try typing something in one of the windows. You’ll see it start happening in the other window!</p>
+<p>This way, you can share a screen, fire up Vim or Emacs, split a console, and do some pair programming easily.</p>
+<p>Let’s get a sense of what it’s doing:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">ps</span> au <span class="kw">|</span> <span class="kw">grep</span> tmux
+<span class="kw">risto</span>   11492  0.0  0.0  19552  2888 pts/10   S+   11:54   0:00 tmux new -s mysession
+<span class="kw">risto</span>   11499  0.0  0.0  19552  2960 pts/7    S+   11:55   0:00 tmux attach -t mysession</code></pre></div>
+<p>From just this process info, we can gather a lot about what it’s doing under the hood. We can see that our two separate pseudoterminal instances, <code>pts/10</code> and <code>pts/7</code>. We can also see that the two tmux instances are not the same process, but belong the same process group, so it’s doing IPC under the hood.</p>
+<p>But it’s one thing to do a simple demo like this, and it’s another to set it up in an actual real-life scenario, so I’m going to talk about how to do that next.</p>
+<h3 id="testing-out-a-real-life-scenario">Testing Out A Real-Life Scenario</h3>
+<p>It’s good to know how you would set this up in a real-world scenario. So in this section I’ll talk about how to simulate that with a virtual machine.</p>
+<p>First off, install virtualbox</p>
+<p>For this post, I’ve decided to do it with <a href="http://alpinelinux.org">Alpine Linux</a>, because the image is small and so trying this out makes it less problematic if you’re worried about the disk space a full linux install would take up on your harddrive. But feel free to use whatever you want. Alpine Linux uses Busy Box, which is like a stripped down version of a lot of main utility toolchain for linux.</p>
+<p>Download the 32-bit Alpine Linux instance from their website. You can check that you’re download completed correctly by checking the sha256sum:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">sha256sum</span> -c ~/downloads/alpine-3.3.3-x86.iso.sha256sum</code></pre></div>
+<h3 id="setup-alpine-linux">Setup Alpine Linux</h3>
+<p>Create a new virtualbox instance. Set it to 32-bit Linux. The rest could just be the defaults.</p>
+<p>Mount the iso of Alpine Linux you downloaded to your new image, and then run the image. It should load Alpine Linux. Once it’s done loading, it should give you a shell prompt.</p>
+<p>Run setup-alpine, and just use all of the defaults. Set a root password. For which disk you want to use, type “sda”, and for how you want to use it, type “sys”.</p>
+<p>Once it’s done installing, unmount the cd and reboot.</p>
+<h3 id="configure-the-system">Configure The System</h3>
+<p>Alpine should load up, and you can login as root with the password you set in the install. You should be connected to the internet out of the box, and you can check with ping.</p>
+<p>First off, you’ll notice that it’s preinstalled with ssh and has a server already up and running:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">rc-status</span>
+<span class="kw">sshd</span>               [started]</code></pre></div>
+<p>Lets add two users to simulate a real ssh environment:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">adduser</span> -g -S -s /bin/ash foo
+$ <span class="kw">adduser</span> -g -S -s /bun/ash bar</code></pre></div>
+<p>The -g flag (GECOS field) will just allow you to set a password without typing (<code>passwrd [user]</code>). The -S flag sets it as a system user, and -s is the shell to run at login (Alpine uses ash).</p>
+<p>The next part is optional, but it’s nice to have sudo permission. Lets add sudo:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">apk</span> add sudo
+$ <span class="kw">visudo</span></code></pre></div>
+<p>Add an entry for foo:</p>
+<pre><code>foobar ALL=(ALL) ALL</code></pre>
+<p>Then, lets update the system. Make sure that the <code>3.3/main</code> repository is uncommented under <code>/etc/apk/repositories</code>, since Tmux lives in that repo, and then run:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">sudo</span> apk update
+$ <span class="kw">sudo</span> apk upgrade
+$ <span class="kw">sudo</span> apk tmux</code></pre></div>
+<p>Try launching Tmux to make sure it works. Now, we need a way to ssh into the guest virtual machine from the host computer. Click Settings for the virtual machine from the virtualbox main window, and go to the Network section. You should see tabs such as Adapter 1, Adapter 2, etc, and for Adapter 1, it should say that it’s Attached to: NAT. Click the Advanced dropdown, and click Port Forwarding. Add a new rule where the protocol is TCP, the Host port is <code>3022</code> and the Guest port is <code>22</code>, and the rest blank.</p>
+<p>You should now be able to ssh into your box via port <code>3022</code>:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">ssh</span> -p 3022 foo@localhost</code></pre></div>
+<p>If ssh complains that there’s a mismatch or security vulnerability, it might be that you already have <code>@localhost</code> in your <code>~/.ssh/known_hosts</code> file. If so, you would need to remove that entry, or follow part two of this tutorial which details a more powerful way of setting it up but requires more configuration.</p>
+<p>You can now ssh as foo in two different places, and then use Tmux like it was described earlier. And if that’s fine (both users using the same account), then that’s all you need. But if you need two different users to be able to pair program (more likely), then we need to create a user group for them:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">addgroup</span> tmuxers
+$ <span class="kw">addgroup</span> foo tmuxers
+$ <span class="kw">addgroup</span> bar tmuxers</code></pre></div>
+<p>And we need to create a directory to house the tmux socket that both users will share. Both users need to have write permissions on the folder, so we can do that by making tmuxers the group owner and adding write permission for the group:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">mkdir</span> /tmux
+$ <span class="kw">chown</span> foo:tmuxers /tmux
+$ <span class="kw">chmod</span> g+w /tmux</code></pre></div>
+<p>If you’re ssh-ed in, you might need to logout/exit for the permissions to update. This time we need to run Tmux with a shared socket. Since there might be more users on our ssh server that are part of the <code>tmuxers</code> group, we should give the socket a descriptive name, like <code>foo-bar-socket</code>. From your host computer, ssh into the server as <code>foo@localhost</code> and type:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">tmux</span> -S /tmux/foo-bar-socket new -s mysession</code></pre></div>
+<p>And then in another terminal window from the host computer, ssh into the server as <code>bar@localhost</code> and type:</p>
+<div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash">$ <span class="kw">tmux</span> -S /tmux/foo-bar-socket attach -t mysession</code></pre></div>
+<p>You’ll now see that both users are attached to the same Tmux instance!</p>
+<h3 id="getting-fancy">Getting Fancy</h3>
+<p>You can set up your remote dev environment in a multitude of ways. Developers can ssh into the development environment, which would have their git instances that they push to the CI environment. They could use Docker to run the dev instance, which would be identical to the CI instance and identical to the production instance. Which would make dealing with Dev Ops much nicer.</p>
+<p>And finally, you might be thinking, <strong>what if I want to run GUI apps?</strong></p>
+<p>For Vim and Emacs users, you can run your browser tests headlessly using an x-video-framebuffer (or xvfb), or with PhantomJS. But if you and your pair developer are IDE users, or if you need an IDE for some other reason, then you’ll definitely love <code>Xpra</code>.</p>
+<p>Stay tuned for part two of this tutorial, where I’ll explain how you can achieve that same kind of behavior with GUI apps! And the nice thing with Xpra is that it doesn’t use X11 forwarding, so it’s not vulnerable to keystroke sniffing, and it’s not invasive, slow and vulnerable like other screen-sharing techniques. And you you’re not forced to set up your screen like your peer.</p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+            <a href="atom.xml"><i class="fa fa-rss-square"></i></a>
+        </div>
+    </body>
+</html>

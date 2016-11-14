@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Risto Stevcev's Blog</title>
+    <link href="http://risto-stevcev.github.io/atom.xml" rel="self" />
+    <link href="http://risto-stevcev.github.io" />
+    <id>http://risto-stevcev.github.io/atom.xml</id>
+    <author>
+        <name>Risto Stevcev</name>
+        <email></email>
+    </author>
+    <updated>2016-10-01T00:00:00Z</updated>
+    <entry>
+    <title>Clojure Specs</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-10-01-clojure-specs.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-10-01-clojure-specs.html</id>
+    <published>2016-10-01T00:00:00Z</published>
+    <updated>2016-10-01T00:00:00Z</updated>
+    <summary type="html"><![CDATA[A brief summary of the powerful new specs feature in Clojure]]></summary>
+</entry>
+<entry>
+    <title>Powerful Language Features</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-08-15-language-features.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-08-15-language-features.html</id>
+    <published>2016-08-15T00:00:00Z</published>
+    <updated>2016-08-15T00:00:00Z</updated>
+    <summary type="html"><![CDATA[My list of powerful language features that have largely been unnoticed by developers]]></summary>
+</entry>
+<entry>
+    <title>What I wish I knew when I was learning Haskell</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-06-31-what-i-wish-i-knew-haskell.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-06-31-what-i-wish-i-knew-haskell.html</id>
+    <published>2016-06-30T00:00:00Z</published>
+    <updated>2016-06-30T00:00:00Z</updated>
+    <summary type="html"><![CDATA[What I wish I knew when I was learning Haskell]]></summary>
+</entry>
+<entry>
+    <title>My top 4 compilation targets</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-06-15-top-compilation-targets.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-06-15-top-compilation-targets.html</id>
+    <published>2016-06-15T00:00:00Z</published>
+    <updated>2016-06-15T00:00:00Z</updated>
+    <summary type="html"><![CDATA[My top 4 languages to target when writing a compiler]]></summary>
+</entry>
+<entry>
+    <title>JavaScript async.serial + async.parallel to ClojureScript core.async</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-05-28-javascript-async-to-clojure-async.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-05-28-javascript-async-to-clojure-async.html</id>
+    <published>2016-05-28T00:00:00Z</published>
+    <updated>2016-05-28T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How to simulate the JS async library features with Clojure's core.async]]></summary>
+</entry>
+<entry>
+    <title>Pair programming with Xpra (part 2)</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-05-15-pair-programming-with-xpra.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-05-15-pair-programming-with-xpra.html</id>
+    <published>2016-05-15T00:00:00Z</published>
+    <updated>2016-05-15T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How to set up graphical pair programming with Xpra]]></summary>
+</entry>
+<entry>
+    <title>Pair programming with Tmux (part 1)</title>
+    <link href="http://risto-stevcev.github.io/posts/2016-04-30-pair-programming-with-tmux.html" />
+    <id>http://risto-stevcev.github.io/posts/2016-04-30-pair-programming-with-tmux.html</id>
+    <published>2016-04-30T00:00:00Z</published>
+    <updated>2016-04-30T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How to set up simple pair programming with Tmux]]></summary>
+</entry>
+
+</feed>
