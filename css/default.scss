@@ -1,5 +1,6 @@
-@import url('https://fonts.googleapis.com/css?family=Raleway');
-@import url('./syntax.css');
+@import "fa/font-awesome";
+@import "syntax";
+@import url('//fonts.googleapis.com/css?family=Raleway');
 
 body {
     color: black;
@@ -59,3 +60,15 @@ div.info {
     font-style: italic;
 }
 
+a {
+    color: darkslategray;
+    text-decoration: none;
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+ul {
+    @extend .fa-ul;
+}

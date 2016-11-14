@@ -1,0 +1,249 @@
+---
+title: Powerful Language Features 
+description: My list of powerful language features that have largely been unnoticed by developers
+---
+
+There are a number of language features that are very powerful but have been 
+largely unnoticed by the larger developer community. Here are some of the ones 
+I really like that I wish the larger programming community was more aware of.
+
+- <i class="fa-li fa fa-code"></i>
+  **Deconstructing Types**  
+  In ML-based languages which have algebraic data types, you can deconstruct 
+  types cased on their constructors when patterm matching. In Haskell totality 
+  is not enforced so you can do this with let expressions as well. This is 
+  not possible in common languages like Java, where it's impossible to generally 
+  get the values used to construct a type given the type alone.
+
+- <i class="fa-li fa fa-code"></i>
+  **Destructuring Containers**  
+  In languages like Python or ES6, you can destructure types very elegantly. In 
+  Python you can unpack tuples, and in ES6 you can unpack JSON objects. This can 
+  save you from writing a lot of ugly boilerplate code.
+
+- <i class="fa-li fa fa-code"></i>
+  **Pattern Matching**  
+  Depending on the language, pattern matching might be nothing but syntactic 
+  sugar for case expressions or conditionals, but the strongest implmenetation 
+  of this feature is magnitudes more powerful than conditional statements most 
+  developers are aware of:
+
+    - <i class="fa-li fa fa-code"></i>
+      **Exhaustive pattern matching** - The cases all have to be different, and they 
+      must handle all possible cases for that type or set of types, and if it 
+      doesn't then the compiler throws an error. This is an incredibly powerful 
+      feature because it enforces total functions, which means that all of your 
+      code is well defined for all sets of inputs. This prevents a lot of errors 
+      that developers might inadvertently introduce into their code. Ocaml and 
+      Purescript enforce this, but Haskell unfortunately doesn't, which is a big 
+      criticism against Haskell.  
+    &nbsp;  
+    - <i class="fa-li fa fa-code"></i>
+      **Deconstructing types** - You can deconstruct types when pattern matching, 
+      which means that you can match on a particular constructor in a sum type, 
+      or to test a predicate for a type deep inside an algebraic data type in a 
+      very elegant way. Combined with exhaustive matching, it ensures that you 
+      can write very expressive and safe code.
+  
+- <i class="fa-li fa fa-code"></i>
+  **Tagged Sum Types**  
+  Most developers are familiar with it's weakly typed sibling called untagged 
+  sum types or union types. The tag in tagged sums means that it's possible to 
+  pattern match and deconstruct on a sum type, making it strongly typed since 
+  the information on which type is contained within is not lost.
+
+- <i class="fa-li fa fa-code"></i>
+  **Option Types**  
+  Option types are incredibly useful. Most languages have null or undefined as 
+  a special value in the language, but in ML-based languages the concept of 
+  nothing is encoded at the type level. This is much more powerful for several 
+  reasons:
+
+    - <i class="fa-li fa fa-code"></i>
+      You know where the nothing value is coming from. So if it's Maybe a string 
+      or Maybe an integer, the Nothing value in both cases is enforced by the 
+      type. So if you have a function that accepts a Maybe String, but you give 
+      it a Maybe Int which is a Nothing, then this would throw a compile-time 
+      error since the types don't match. In a language without option types, it's
+      often be much harder to track down where the null value got introduced and 
+      it's much easier to introduce bugs into the code because the type is less 
+      refined.  
+    &nbsp;  
+    - <i class="fa-li fa fa-code"></i>
+      You can pattern match against option types. Combined with enforced 
+      exhaustive pattern matching, you get an incredible amount of type safety. 
+      This actually eliminates an entire class of errors called null pointer 
+      errors, which are actually fairly common in languages without option types.  
+    &nbsp;  
+    - <i class="fa-li fa fa-code"></i>
+      In conjunction with exhaustive pattern matching, you can also elminate 
+      another entire class of errors called hash or array index out of bounds errors, 
+      by introducing safe accessor functions for hash or array types that return a 
+      Maybe value.
+
+- <i class="fa-li fa fa-code"></i>
+  **Enforced Totality and Purity**  
+  The combination of enforced totality and purely functional code actually does 
+  something that a lot of developers think is impossible: it completely eliminates 
+  the possibility of runtime errors.
+
+- <i class="fa-li fa fa-code"></i>
+  **Generative Testing**  
+  In a lot of traditional languages writing unit tests is often a time consuming, 
+  error prone and verbose process. With generative testing like Quickcheck, 
+  you can have the language write the tests for you. Although this is a library 
+  feature, this kind of testing is really made very useful because Haskell is purely 
+  functional, so side effecting functions can be tested by creating Pure values 
+  which would be impossible without some kind of mocking library in other languages.
+  The need for testing, including generative testing, can even be eliminated with 
+  the introduction of refinement and dependent types.
+
+- <i class="fa-li fa fa-code"></i>
+  **Refinement Types**  
+  Refinement types are a form of predicate based subtyping. This is the programmers 
+  equivalent to set builder notation coming from set theory. These types can 
+  prevent a lot of boilerplate code that would be written to ensure type safety. 
+  For example, if you have a function that can only take positive integers, then 
+  without refinement types you would need to handle the case when the user doesn't 
+  provide a positive integer, which would make the type signature of the function 
+  more complex because it would need to return a Maybe, Either, or Except type. With 
+  refinement types, this type burden is instead given to the caller to the function.  
+  &nbsp;   
+  Refinement types also eliminate the need for generative tests because the predicates
+  are already encoded in the types. Together with functional purity and enforced 
+  totality, this eliminates the need for any tests except as a form of documentation, 
+  which elminates what's usually a massive burden in modern web development.
+
+- <i class="fa-li fa fa-code"></i>
+  **Dependent Types**  
+  Dependent types also eliminate the need for generative tests, because instead of 
+  writing tests, you actually *prove* that your functions behave the way you want 
+  them to. One downside to generative tests is that it generates a random sample of 
+  values for the given types, so it's possible that the generated tests won't 
+  reach a potential corner case and error out. You can compensate for this by 
+  increasing the sample size of the generative tests, but with proofs this isn't an issue. 
+  The downside with using proofs in code is that writing proofs for code is often 
+  not easy to do. This is still a very active field, with the Idris language 
+  leading it. A popular idea for this common problem is to provide reusable proofs 
+  that programmers can leverage.  
+  &nbsp;  
+  A lot of proofs have already been developed in this way in Idris. So for example, 
+  if you write a Monoid in Haskell, there's nothing in the language that can 
+  enforce that your type satisfies the Monoid laws. There are generative tests that 
+  you can leverage to check if your Monoid does satisfy them, but this isn't a proof. 
+  In Idris, you can verify that your Monoid satisfies the laws by implementing the 
+  VerifiedMonoid typeclass for your type.
+
+- <i class="fa-li fa fa-code"></i>
+  **Linear Types**  
+  Haskell and Purescript use Monads to encode side effects and retain purity. But 
+  there's another popular approach which is to use linear types. Linear types are 
+  also called uniqueness types because they enforce at compile time that the type 
+  can be used once and only once.  
+  &nbsp;  
+  Rust uses a flavor of linear types called affine types, which can be used only 0-1 
+  times. So for example, when opening a file in Rust in contrast to C, you can 
+  enforce at *compile-time* that the file cannot be used after it's closed. In C 
+  there's nothing stopping you from trying to do something with a clsoed FILE handle. 
+
+- <i class="fa-li fa fa-code"></i>
+  **Immutability**  
+  Functional languages enforce immutability as part of the language because they are 
+  higher level in terms in abstraction since they are declarative in nature. This is a 
+  particularly valuable asset when it comes to concurrent programming. These days 
+  almost all applications are web applications or written in web languages like 
+  Javascript. Both frontend and backend programming is heavily concurrent, so 
+  having this kind of guarantee can eliminate a lot of errors. By having enforced 
+  immutability, you don't need special constructs like mutexes and semaphores to 
+  prevent race conditions in your code because all of the code is declarative in 
+  nature. Sometimes resources do need to be shared, so some languages like Clojure 
+  provide special reference types called atoms which have some transactional 
+  guarantees like those you see in database languages.
+
+- <i class="fa-li fa fa-code"></i>
+  **Distributed Programming**  
+  Some languages have very nice support for distributed programming built in 
+  directly into the language. Erlang makes this very easy, and provides really 
+  nice features such as fault tolerance, fast lightweight processes, and actors 
+  to make this kind of programming as painless as possible.  
+  &nbsp;  
+  A new language in the horizon called Unison allows nodes to reference functions 
+  from other nodes. The way you might handle this normally is to send the code 
+  in the body of an HTTP request and then eval the code on the other end. But this 
+  approach is very unsafe, and Unison has some built-in features to ensure that 
+  the code sharing it provides is safe. Another nice feature of this is an 
+  always-online feature of the code, where you can live update code without 
+  turning off the server temporarily. If you update a function, then any code 
+  still referencing the old function remains unchanged, which means that live 
+  updating code remains safe. This opens up a whole new world of distributed 
+  programming, and it's potential is currently being actively researched. 
+
+- <i class="fa-li fa fa-code"></i>
+  **Macros**  
+  The nicest and most talked about feature of Lisp languages is it's homoiconicity. 
+  What this means is that the code is data, and specifically with lisp, which is 
+  made up of S-expressions, these S-expressions can be thought of as lists. Hence 
+  the term Lisp (list processor). This makes Lisp macros more powerful and 
+  expressive than other language out there, because you can handle any piece of 
+  code as if it's a list and transform it into some other structure to be evaluated.  
+  &nbsp;  
+  There are two types of macros, regular macros and reader macros. Regular macros 
+  get evaluated and expanded at runtime. The benefit of this is that any information 
+  that would only be available at runtime can be used in the macro. The drawback 
+  is that you can't extend the compiler with this approach since it's not at 
+  compile time. Reader macros get evaluated at compile time, which effectively 
+  gives you the ability to extend the language with the simplicity and elegance 
+  that Lisp macros offer. Clojure provides limited support for reader macros but 
+  Racket has full support for them.
+
+- <i class="fa-li fa fa-code"></i>
+  **More Powerful Polymorphism**  
+  The way most people are familiar with polymorphism is the Java style of it 
+  called parametric polymorphism. So if you wanted to write a polymorphic class, 
+  you would write it like `Object<T>`, where T is the parameterized polymorphic 
+  type.  
+  &nbsp;  
+  But languages like Haskell and Purescript provide more powerful parametric and 
+  ad-hoc polymorphism. For example, you can write functions that work on types that 
+  accept a constructor of any type. A type with this kind of signature is compeltely 
+  okay: `foo :: f a -> f b -> f c`, where `f`, `a`, `b`, and `c` are all polymoprhic
+  types but also potentially distinct types and is enforced by the compiler. This 
+  level of expressiveness is not possible with the polymoprhism most people are 
+  familiar with.
+
+
+These are some features that are developed by libraries but are also be built 
+into languages like Elm:
+
+- <i class="fa-li fa fa-code"></i>
+  **Time Travel Debugging**  
+  With Elm and libraries such as Redux and Pux, you can use a time travel debugger. 
+  What this lets you do is undo events that got fired, so that you can literally 
+  go back in time. This is incredibly useful for debugging event streams.
+
+- <i class="fa-li fa fa-code"></i>
+  **Hot Module Reloading**  
+  Hot module reloading sets up a websocket server so that when you save your code, 
+  the server automatically compiles and runs the code and the code automatically 
+  updates in the browser (or terminal in the case of Figwheel) without having to 
+  reload anything. The best part about this is that the state is preserved. This 
+  speeds up development time substantially. Elm, Pux, and Webpack have this feature, 
+  but Figwheel is more powerful than all of these because it works on NodeJS also.
+
+- <i class="fa-li fa fa-code"></i>
+  **Proof By Construction Editing**  
+  The Unison language also provides another very interesting feature as an editor, 
+  which is that code is written by construction rather than treated as ascii or 
+  unicode strings. The way we're used to writing code is by writing some strings of 
+  code in a file, compiling our code, and then if there's a compile-time error, 
+  going back and trying to fix the code, and repeating this process until it works.  
+  &nbsp;  
+  This process is time consuming and completely unnecessary. With Unison's editor, 
+  you don't write strings that may or may not be correct syntactically and semantically. 
+  Instead, Unison only lets you type in values that are correct as far as the 
+  compiler is concerned, which saves a lot of developer time.  
+  &nbsp;  
+  This concept isn't new. A lot of languages that are used for educational purposes, 
+  such as the Lego Mindstorms language, is graphical in nature, and only lets you 
+  combine pieces that work together. This is a lot like that except the feature is 
+  more similar to autocomplete in your usual IDEs.

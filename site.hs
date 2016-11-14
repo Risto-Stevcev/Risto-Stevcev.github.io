@@ -2,18 +2,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 import           Data.Monoid (mappend)
 import           Hakyll
+import           Hakyll.Web.Sass (sassCompiler)
 
 
 --------------------------------------------------------------------------------
+
+
+
+
 main :: IO ()
 main = hakyll $ do
+    match "fonts/*" $ do
+        route   idRoute
+        compile copyFileCompiler
+
     match "images/*" $ do
         route   idRoute
         compile copyFileCompiler
 
-    match "css/*" $ do
-        route   idRoute
-        compile compressCssCompiler
+    match "css/*.scss" $ do
+        route $ setExtension "css"
+        let compressCssItem = fmap compressCss
+        compile (compressCssItem <$> sassCompiler)
 
     match (fromList ["about.rst", "contact.markdown"]) $ do
         route   $ setExtension "html"
@@ -60,9 +70,24 @@ main = hakyll $ do
     match "templates/*" $ compile templateCompiler
 
 
+    create ["atom.xml"] $ do
+        route idRoute
+        compile $ do
+            posts <- fmap (take 10) . recentFirst =<< loadAll "posts/*"
+            renderAtom myFeedConfiguration postCtx posts
+
+
 --------------------------------------------------------------------------------
 postCtx :: Context String
 postCtx =
     dateField "date" "%B %e, %Y" `mappend`
     defaultContext
 
+myFeedConfiguration :: FeedConfiguration
+myFeedConfiguration = FeedConfiguration
+    { feedTitle       = "Risto Stevcev's Blog"
+    , feedDescription = "My blog on all things tech"
+    , feedAuthorName  = "Risto Stevcev"
+    , feedAuthorEmail = ""
+    , feedRoot        = "http://risto-stevcev.github.io"
+    }
